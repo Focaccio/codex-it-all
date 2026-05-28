@@ -1,0 +1,24 @@
+# Site 2 standalone disc repository package set.
+#
+# Package-name notes:
+# - iostat is provided by the Debian package sysstat.
+# - tftp client is provided by the Debian package tftp-hpa.
+# - code is Microsoft Visual Studio Code from packages.microsoft.com.
+
+screen
+expect
+glow
+iotop
+sysstat
+atop
+glances
+lldpd
+tftpd-hpa
+tftp-hpa
+plocate
+fd-find
+nmap
+code
+wget
+gpg
+apt-transport-https
