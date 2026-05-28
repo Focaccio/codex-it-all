@@ -1,0 +1,12 @@
+services:
+  oxidized:
+    image: oxidized/oxidized:latest
+    container_name: oxidized
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - /opt/server101/services/oxidized/config:/home/oxidized/.config/oxidized
+      - /opt/server101/services/oxidized/output:/home/oxidized/.config/oxidized/output
+    environment:
+      CONFIG_RELOAD_INTERVAL: "600"

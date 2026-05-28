@@ -1,0 +1,17 @@
+build/
+tmp/
+images/
+*.iso
+*.log
+
+# Large offline artifacts must be stored out of band and staged before ISO build.
+artifacts/docker-images/*.tar
+artifacts/docker-images/*.tar.gz
+artifacts/native-binaries/gitea-*-linux-amd64
+build/server101-payload/
+build/server101-payload.tar.gz
+
+# Local editor/office lock files.
+~$*.docx
+Server_101_Offline_ISO_Packaging_Plan.docx
+.DS_Store

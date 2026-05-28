@@ -1,0 +1,9 @@
+# Format:
+# hostname-or-ip:model:username:password:input:ssh-kex:ssh-host-key:ssh-encryption:ssh-hmac
+#
+# Examples:
+# <DEVICE_IP>:ios:<DEVICE_USER>:<DEVICE_PASSWORD>:ssh,telnet::::
+# switch1.top.demosdnx.net:procurve:manager:device-password:telnet::::
+#
+# Replace these examples with real local network devices.
+# <DEVICE_IP>:ios:<DEVICE_USER>:<DEVICE_PASSWORD>:ssh:diffie-hellman-group1-sha1:ssh-rsa:aes128-cbc:hmac-sha1

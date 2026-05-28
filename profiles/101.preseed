@@ -1,0 +1,103 @@
+### Locale, keyboard, and network
+d-i debian-installer/locale string en_US.UTF-8
+d-i keyboard-configuration/xkb-keymap select us
+d-i netcfg/enable boolean false
+d-i netcfg/get_hostname string s101
+d-i netcfg/get_domain string top.demosdnx.net
+
+### Offline install media
+#
+# The target bare-metal server has no internet access. Packages must come from
+# the custom ISO built by simple-cdd, not from a network mirror.
+d-i apt-setup/use_mirror boolean false
+
+### Users
+d-i passwd/root-login boolean true
+d-i passwd/root-password password <CHANGE_ME_PASSWORD>
+d-i passwd/root-password-again password <CHANGE_ME_PASSWORD>
+d-i passwd/user-fullname string Debian Admin
+d-i passwd/username string autoadmin
+d-i passwd/user-password password <CHANGE_ME_PASSWORD>
+d-i passwd/user-password-again password <CHANGE_ME_PASSWORD>
+d-i user-setup/allow-password-weak boolean true
+d-i user-setup/encrypt-home boolean false
+
+### Clock
+d-i clock-setup/utc boolean true
+d-i time/zone string America/Los_Angeles
+d-i clock-setup/ntp boolean false
+
+### Apt
+d-i apt-setup/non-free-firmware boolean true
+d-i apt-setup/contrib boolean true
+d-i apt-setup/non-free boolean true
+popularity-contest popularity-contest/participate boolean false
+
+### Package selection
+tasksel tasksel/first multiselect standard, ssh-server
+d-i pkgsel/upgrade select none
+d-i pkgsel/update-policy select none
+
+### Boot loader
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/with_other_os boolean true
+
+### Partitioning
+#
+# This starter profile leaves disk selection interactive to avoid accidentally
+# wiping the wrong bare-metal disk. After testing, add explicit partman settings
+# here if you want a fully unattended install.
+
+### Finish install
+d-i finish-install/reboot_in_progress note
+
+### Late configuration
+d-i preseed/late_command string \
+  in-target /bin/sh -c 'echo "autoadmin ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/90-autoadmin'; \
+  in-target chmod 0440 /etc/sudoers.d/90-autoadmin; \
+  in-target mkdir -p /etc/systemd/logind.conf.d; \
+  in-target /bin/sh -c 'printf "%s\n" "[Login]" "IdleAction=ignore" "IdleActionSec=0" "HandleLidSwitch=ignore" "HandleLidSwitchExternalPower=ignore" "HandleLidSwitchDocked=ignore" "HandlePowerKey=ignore" "HandlePowerKeyLongPress=ignore" "HandleSuspendKey=ignore" "HandleSuspendKeyLongPress=ignore" "HandleHibernateKey=ignore" "HandleHibernateKeyLongPress=ignore" >/etc/systemd/logind.conf.d/99-server101-no-powersave.conf'; \
+  in-target mkdir -p /etc/systemd/system/getty@tty1.service.d; \
+  in-target /bin/sh -c 'printf "%s\n" "[Service]" "ExecStartPre=/usr/bin/setterm --blank 0 --powerdown 0 --powersave off" >/etc/systemd/system/getty@tty1.service.d/override.conf'; \
+  in-target mkdir -p /etc/X11/xorg.conf.d; \
+  in-target /bin/sh -c 'printf "%s\n" "Section \"ServerFlags\"" "    Option \"BlankTime\" \"0\"" "    Option \"StandbyTime\" \"0\"" "    Option \"SuspendTime\" \"0\"" "    Option \"OffTime\" \"0\"" "EndSection" "" "Section \"Monitor\"" "    Identifier \"Monitor0\"" "    Option \"DPMS\" \"false\"" "EndSection" >/etc/X11/xorg.conf.d/10-server101-no-dpms.conf'; \
+  in-target mkdir -p /etc/udev/rules.d; \
+  in-target /bin/sh -c 'printf "%s\n" "ACTION==\"add\", SUBSYSTEM==\"usb\", TEST==\"power/control\", ATTR{power/control}=\"on\"" >/etc/udev/rules.d/99-server101-no-usb-autosuspend.rules'; \
+  in-target systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target; \
+  in-target /bin/sh -c 'printf "%s\n" "s101" >/etc/hostname'; \
+  in-target mkdir -p /etc/server101; \
+  in-target /bin/sh -c 'printf "%s\n" "SMB_PASSWORD=<CHANGE_ME_PASSWORD>" "GITEA_ADMIN_PASSWORD=<CHANGE_ME_PASSWORD>" "OBSERVIUM_DB_ROOT_PASSWORD=<CHANGE_ME_PASSWORD>" "OBSERVIUM_DB_PASSWORD=<CHANGE_ME_PASSWORD>" >/etc/server101/firstboot.env'; \
+  in-target chmod 0600 /etc/server101/firstboot.env; \
+  in-target /bin/sh -c 'printf "%s\n" "127.0.0.1 localhost" "127.0.1.1 s101.top.demosdnx.net s101" "<SERVER_IP> s101.top.demosdnx.net s101 top.demosdnx.net demosdnx.net" "<MGMT_IP> mgmt.s101.top.demosdnx.net s101-mgmt" "" "::1 localhost ip6-localhost ip6-loopback" "ff02::1 ip6-allnodes" "ff02::2 ip6-allrouters" >/etc/hosts'; \
+  in-target systemctl enable systemd-networkd; \
+  in-target systemctl disable NetworkManager || true; \
+  in-target systemctl mask NetworkManager || true; \
+  in-target apt-get purge -y network-manager network-manager-l10n network-manager-gnome plasma-nm qml6-module-org-kde-networkmanager wpasupplicant || true; \
+  in-target apt-get autoremove -y || true; \
+  in-target /bin/sh -c 'echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections'; \
+  in-target /bin/sh -c 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin DEBIAN_FRONTEND=noninteractive dpkg-reconfigure wireshark-common || true'; \
+  in-target usermod -aG wireshark autoadmin || true; \
+  in-target systemctl enable containerd; \
+  in-target systemctl enable docker; \
+  in-target systemctl enable docker.socket; \
+  in-target usermod -aG docker autoadmin || true; \
+  in-target systemctl enable named; \
+  in-target groupadd -f smbusers; \
+  in-target usermod -aG smbusers autoadmin || true; \
+  in-target mkdir -p /srv/samba/server101; \
+  in-target chown autoadmin:smbusers /srv/samba/server101; \
+  in-target chmod 2770 /srv/samba/server101; \
+  in-target systemctl disable samba-ad-dc || true; \
+  in-target systemctl enable smbd; \
+  in-target systemctl enable nmbd; \
+  in-target systemctl enable ssh; \
+  in-target systemctl enable chrony; \
+  in-target systemctl enable unattended-upgrades; \
+  in-target systemctl enable prometheus-node-exporter; \
+  in-target /bin/sh -c 'printf "%s\n" "startxfce4" >/home/autoadmin/.xsession'; \
+  in-target chown autoadmin:autoadmin /home/autoadmin/.xsession; \
+  in-target chmod 0644 /home/autoadmin/.xsession; \
+  in-target adduser xrdp ssl-cert || true; \
+  in-target systemctl enable xrdp; \
+  in-target systemctl disable ufw || true; \
+  /bin/sh -c 'for payload in /cdrom/simple-cdd/server101-payload.tar.gz /media/cdrom/simple-cdd/server101-payload.tar.gz; do if [ -f "$payload" ]; then install -d /target/opt; tar -xzf "$payload" -C /target/opt; chmod 0755 /target/opt/server101-payload/scripts/*.sh; install -d /target/etc/systemd/system; cp /target/opt/server101-payload/services/systemd/server101-firstboot.service /target/etc/systemd/system/server101-firstboot.service; in-target systemctl enable server101-firstboot.service; exit 0; fi; done; echo "Server 101 payload archive missing from installer media" >&2; exit 1'

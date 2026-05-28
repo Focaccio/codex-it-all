@@ -1,0 +1,14 @@
+[Unit]
+Description=Server 101 offline service installation
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+ConditionPathExists=/opt/server101-payload/scripts/install-server101-offline.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/server101/firstboot.env
+ExecStart=/bin/bash /opt/server101-payload/scripts/install-server101-offline.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

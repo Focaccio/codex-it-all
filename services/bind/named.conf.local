@@ -1,0 +1,4 @@
+zone "demosdnx.net" {
+        type master;
+        file "/etc/bind/zones/db.demosdnx.net";
+};

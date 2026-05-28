@@ -1,0 +1,7 @@
+# Customization #1: Server 101 does not use NetworkManager.
+network-manager
+network-manager-l10n
+network-manager-gnome
+plasma-nm
+qml6-module-org-kde-networkmanager
+wpasupplicant

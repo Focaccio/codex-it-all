@@ -1,0 +1,19 @@
+$TTL 3600
+@       IN SOA  s101.top.demosdnx.net. hostmaster.demosdnx.net. (
+                2026052501 ; serial
+                3600       ; refresh
+                900        ; retry
+                604800     ; expire
+                3600 )     ; minimum
+
+        IN NS   s101.top.demosdnx.net.
+
+@               IN A     <SERVER_IP>
+s101.top        IN A     <SERVER_IP>
+mgmt.s101.top   IN A     <MGMT_IP>
+
+top             IN A     <SERVER_IP>
+xsl             IN A     <SERVER_IP>
+gp8             IN A     <SERVER_IP>
+
+observium.top   IN CNAME s101.top.demosdnx.net.

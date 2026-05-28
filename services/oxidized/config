@@ -1,0 +1,59 @@
+---
+username: admin
+password: <CHANGE_ME_PASSWORD>
+model: ios
+resolve_dns: true
+interval: 3600
+use_syslog: false
+debug: false
+threads: 30
+timeout: 60
+retries: 3
+prompt: !ruby/regexp /^([\w.@-]+[#>]\s?)$/
+rest: 0.0.0.0:8888
+
+input:
+  default: ssh, telnet
+  debug: false
+  ssh:
+    secure: false
+  telnet:
+    secure: false
+
+output:
+  default: git
+  git:
+    user: Oxidized
+    email: oxidized@s101.top.demosdnx.net
+    repo: /home/oxidized/.config/oxidized/output/configs.git
+
+source:
+  default: csv
+  csv:
+    file: /home/oxidized/.config/oxidized/router.db
+    delimiter: !ruby/regexp /:/
+    map:
+      name: 0
+      model: 1
+      username: 2
+      password: 3
+      input: 4
+    vars_map:
+      ssh_kex: 5
+      ssh_host_key: 6
+      ssh_encryption: 7
+      ssh_hmac: 8
+
+model_map:
+  cisco: ios
+  ios: ios
+  nxos: nxos
+  eos: eos
+  juniper: junos
+  junos: junos
+  procurve: procurve
+  aruba: procurve
+  fortios: fortios
+  panos: panos
+  routeros: routeros
+  edgeos: edgeos
