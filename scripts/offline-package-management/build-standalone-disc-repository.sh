@@ -55,11 +55,16 @@ write_install_one_script() {
 set -euo pipefail
 
 PACKAGE_NAME="${1:?package name required}"
+DEPENDENCY_SET="${2:-$PACKAGE_NAME}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${LOG_DIR:-/var/log/offline-package-management}"
 LOG_FILE="$LOG_DIR/install-$PACKAGE_NAME-$(date +%Y%m%dT%H%M%S).log"
-SOURCE_LIST="/etc/apt/sources.list.d/offline-package-management.list"
-APT_LIST_DIR="/var/lib/apt/lists/offline-package-management"
+TMP_APT_DIR="$(mktemp -d)"
+
+cleanup() {
+  rm -rf "$TMP_APT_DIR"
+}
+trap cleanup EXIT
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run with sudo: sudo $0 $PACKAGE_NAME" >&2
@@ -67,30 +72,73 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 mkdir -p "$LOG_DIR"
-mkdir -p "$APT_LIST_DIR/partial"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "Offline Package Management"
 echo "Repository: $REPO_ROOT"
 echo "Package: $PACKAGE_NAME"
+echo "Dependency set: $DEPENDENCY_SET"
 echo "Started: $(date -Is)"
 
 apt-mark showmanual | sort >"$LOG_DIR/manual-before-$PACKAGE_NAME.txt" || true
 dpkg-query -W -f='${Package}\t${Version}\t${Status}\n' | sort >"$LOG_DIR/dpkg-before-$PACKAGE_NAME.txt" || true
 
-cat >"$SOURCE_LIST" <<EOF
-deb [trusted=yes] file:$REPO_ROOT ./
-EOF
+DEPENDENCY_FILE="$REPO_ROOT/manifest/package-dependencies/$DEPENDENCY_SET.txt"
+PACKAGE_MANIFEST="$REPO_ROOT/manifest/all-deb-packages.tsv"
+
+if [ ! -f "$DEPENDENCY_FILE" ]; then
+  echo "Missing dependency manifest: $DEPENDENCY_FILE" >&2
+  exit 1
+fi
+
+if [ ! -f "$PACKAGE_MANIFEST" ]; then
+  echo "Missing package manifest: $PACKAGE_MANIFEST" >&2
+  exit 1
+fi
+
+mapfile -t DEB_PATHS < <(
+  awk -F '\t' '
+    NR == FNR {
+      wanted[$1] = 1
+      next
+    }
+    $1 in wanted {
+      print repo "/" $3
+    }
+  ' repo="$REPO_ROOT" "$DEPENDENCY_FILE" "$PACKAGE_MANIFEST"
+)
+
+if [ "${#DEB_PATHS[@]}" -eq 0 ]; then
+  echo "No local .deb paths resolved for package: $PACKAGE_NAME" >&2
+  exit 1
+fi
+
+missing=0
+for deb_path in "${DEB_PATHS[@]}"; do
+  if [ ! -f "$deb_path" ]; then
+    echo "Missing bundled package file: $deb_path" >&2
+    missing=1
+  fi
+done
+
+if [ "$missing" -ne 0 ]; then
+  exit 1
+fi
+
+install -d "$TMP_APT_DIR/lists/partial" "$TMP_APT_DIR/cache/partial"
+: >"$TMP_APT_DIR/sources.list"
 
 APT_OPTS=(
-  -o "Dir::Etc::sourcelist=$SOURCE_LIST"
+  -o "Dir::Etc::sourcelist=$TMP_APT_DIR/sources.list"
   -o "Dir::Etc::sourceparts=-"
-  -o "Dir::State::lists=$APT_LIST_DIR"
+  -o "Dir::State::lists=$TMP_APT_DIR/lists"
+  -o "Dir::Cache::archives=$TMP_APT_DIR/cache"
+  -o "Dir::Cache::pkgcache=$TMP_APT_DIR/pkgcache.bin"
+  -o "Dir::Cache::srcpkgcache=$TMP_APT_DIR/srcpkgcache.bin"
   -o "Debug::NoLocking=1"
 )
 
-apt-get "${APT_OPTS[@]}" update
-apt-get "${APT_OPTS[@]}" install -y --no-download --no-install-recommends "$PACKAGE_NAME"
+apt-get "${APT_OPTS[@]}" install -y --no-install-recommends "${DEB_PATHS[@]}"
 
 apt-mark showmanual | sort >"$LOG_DIR/manual-after-$PACKAGE_NAME.txt" || true
 dpkg-query -W -f='${Package}\t${Version}\t${Status}\n' | sort >"$LOG_DIR/dpkg-after-$PACKAGE_NAME.txt" || true
@@ -114,7 +162,7 @@ write_repo_install_scripts() {
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-"\$SCRIPT_DIR/install-one-package.sh" "$(script_to_package_name "$script_name")"
+"\$SCRIPT_DIR/install-one-package.sh" "$(script_to_package_name "$script_name")" "$script_name"
 EOF
     chmod 0755 "$SCRIPTS_DIR/install-$script_name.sh"
   done <"$packages_file"

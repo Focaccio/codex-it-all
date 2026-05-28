@@ -115,6 +115,17 @@ The `.deb` files are stored once in `pool/main`. Individual package installers
 use the shared repository instead of duplicating dependencies into separate
 folders.
 
+The package installers use local `.deb` paths directly. They do not rely on APT
+installing from `Filename:` entries in a flat `file:` repository, because that
+path handling can fail on Debian with errors like:
+
+```text
+E: Internal Error, Pathname to install is not absolute
+```
+
+Instead, each script reads its dependency manifest and passes the required local
+`.deb` files directly to `apt-get install`.
+
 ## Dependency Completeness
 
 The builder resolves packages against an empty dpkg status file. This makes APT

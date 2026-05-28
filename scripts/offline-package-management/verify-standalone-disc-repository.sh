@@ -79,26 +79,49 @@ done <"$REPO_DIR/manifest/install-targets.txt"
 require_file "$REPO_DIR/scripts/install-all.sh"
 [ -x "$REPO_DIR/scripts/install-all.sh" ] || fail "script is not executable: scripts/install-all.sh"
 
-echo "Running no-install APT simulation from the standalone repository..."
+echo "Checking local .deb dependency paths..."
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 mkdir -p "$tmp_dir/lists/partial" "$tmp_dir/cache/partial"
-: >"$tmp_dir/status"
-printf 'deb [trusted=yes] file:%s ./\n' "$REPO_DIR" >"$tmp_dir/sources.list"
+: >"$tmp_dir/sources.list"
+
+all_dependency_names="$tmp_dir/all-dependency-names.txt"
+all_deb_paths="$tmp_dir/all-deb-paths.txt"
+
+while read -r package_name; do
+  [ -n "$package_name" ] || continue
+  script_name="$(script_name_for_package "$package_name")"
+  cat "$REPO_DIR/manifest/package-dependencies/$script_name.txt"
+done <"$REPO_DIR/manifest/install-targets.txt" | sort -u >"$all_dependency_names"
+
+awk -F '\t' '
+  NR == FNR {
+    wanted[$1] = 1
+    next
+  }
+  $1 in wanted {
+    print repo "/" $3
+  }
+' repo="$REPO_DIR" "$all_dependency_names" "$REPO_DIR/manifest/all-deb-packages.tsv" >"$all_deb_paths"
+
+while read -r deb_path; do
+  [ -n "$deb_path" ] || continue
+  [ -f "$deb_path" ] || fail "missing bundled dependency .deb: $deb_path"
+done <"$all_deb_paths"
 
 apt_opts=(
   -o "Dir::Etc::sourcelist=$tmp_dir/sources.list"
   -o "Dir::Etc::sourceparts=-"
   -o "Dir::State::lists=$tmp_dir/lists"
-  -o "Dir::State::status=$tmp_dir/status"
   -o "Dir::Cache::archives=$tmp_dir/cache"
   -o "Dir::Cache::pkgcache=$tmp_dir/pkgcache.bin"
   -o "Dir::Cache::srcpkgcache=$tmp_dir/srcpkgcache.bin"
   -o "Debug::NoLocking=1"
 )
 
-apt-get "${apt_opts[@]}" update >/dev/null
-apt-get "${apt_opts[@]}" --simulate --no-install-recommends install $(tr '\n' ' ' <"$REPO_DIR/manifest/install-targets.txt") >/dev/null
+echo "Running no-install APT simulation from bundled local .deb files..."
+mapfile -t local_debs <"$all_deb_paths"
+apt-get "${apt_opts[@]}" --simulate --no-install-recommends install "${local_debs[@]}" >/dev/null
 
 echo "Pre-burn verification passed."
 echo "Repository: $REPO_DIR"

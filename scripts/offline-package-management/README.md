@@ -62,6 +62,11 @@ lists every bundled `.deb`, including dependencies. The per-package files under
 an empty dpkg status file, while the actual `.deb` files are kept once in the
 shared `pool/main` repository.
 
+The generated package install scripts do not rely on APT's `Filename:` handling
+for flat `file:` repositories. Each script reads its dependency manifest,
+resolves the matching absolute `.deb` paths from `all-deb-packages.tsv`, and
+passes those local files directly to `apt-get install`.
+
 ## Burn
 
 Before burning, run:
