@@ -88,6 +88,13 @@ sudo ./scripts/inventory-before-after.sh before
 sudo ./scripts/install-all.sh
 ```
 
+If the direct mount reports `wrong fs type` immediately after burning, refresh
+the optical drive state and mount with:
+
+```bash
+sudo ./scripts/offline-package-management/mount-standalone-disc-repository.sh
+```
+
 Or install packages individually:
 
 ```bash

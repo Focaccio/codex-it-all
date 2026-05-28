@@ -214,6 +214,23 @@ sudo ./scripts/inventory-before-after.sh before
 sudo ./scripts/install-all.sh
 ```
 
+If the mount fails with `wrong fs type`, the optical drive may still have stale
+media state after burning. Refresh the drive and mount read-only as ISO9660:
+
+```bash
+sudo eject /dev/sr0
+sleep 3
+sudo eject -t /dev/sr0
+sleep 8
+sudo mount -t iso9660 -o ro /dev/sr0 /mnt/offline-package-repo
+```
+
+For future builds, use the helper script:
+
+```bash
+sudo ./scripts/offline-package-management/mount-standalone-disc-repository.sh
+```
+
 Install individual packages when needed:
 
 ```bash
