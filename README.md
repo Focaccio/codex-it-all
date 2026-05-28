@@ -1,4 +1,9 @@
-# Server 101 Custom Debian ISO
+# codex-it-all
+
+Codex is running; this repo documents what it is working on and finished work
+products.
+
+## Server 101 Custom Debian ISO
 
 This project builds a bootable Debian AMD64 installer ISO for **Server 101**.
 The Simple-CDD profile is named `101`, and the installed Linux hostname defaults
