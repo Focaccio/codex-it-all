@@ -97,7 +97,7 @@ if [ ! -f "$PACKAGE_MANIFEST" ]; then
 fi
 
 mapfile -t DEB_PATHS < <(
-  awk -F '\t' '
+  awk -F '\t' -v repo="$REPO_ROOT" '
     NR == FNR {
       wanted[$1] = 1
       next
@@ -105,7 +105,7 @@ mapfile -t DEB_PATHS < <(
     $1 in wanted {
       print repo "/" $3
     }
-  ' repo="$REPO_ROOT" "$DEPENDENCY_FILE" "$PACKAGE_MANIFEST"
+  ' "$DEPENDENCY_FILE" "$PACKAGE_MANIFEST"
 )
 
 if [ "${#DEB_PATHS[@]}" -eq 0 ]; then

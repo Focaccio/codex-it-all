@@ -41,7 +41,7 @@ Built disc image:
 Disc image SHA256:
 
 ```text
-d41ab45045b801b2aa4c644498e6120fb0463212aab151c1660859b5b54607b9
+5b25e5f0640db111ab01ba00c5a2ea253aa08b1205bfd712e5d049fddec1d6cb
 ```
 
 Burn result:

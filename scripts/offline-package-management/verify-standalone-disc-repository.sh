@@ -94,7 +94,7 @@ while read -r package_name; do
   cat "$REPO_DIR/manifest/package-dependencies/$script_name.txt"
 done <"$REPO_DIR/manifest/install-targets.txt" | sort -u >"$all_dependency_names"
 
-awk -F '\t' '
+awk -F '\t' -v repo="$REPO_DIR" '
   NR == FNR {
     wanted[$1] = 1
     next
@@ -102,7 +102,7 @@ awk -F '\t' '
   $1 in wanted {
     print repo "/" $3
   }
-' repo="$REPO_DIR" "$all_dependency_names" "$REPO_DIR/manifest/all-deb-packages.tsv" >"$all_deb_paths"
+' "$all_dependency_names" "$REPO_DIR/manifest/all-deb-packages.tsv" >"$all_deb_paths"
 
 while read -r deb_path; do
   [ -n "$deb_path" ] || continue
